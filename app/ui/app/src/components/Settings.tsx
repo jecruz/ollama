@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import LoadingScreen from "@/components/LoadingScreen";
 import { Switch } from "@/components/ui/switch";
 import { Text } from "@/components/ui/text";
 import { Input } from "@/components/ui/input";
@@ -261,7 +262,7 @@ export default function Settings() {
   };
 
   if (loading) {
-    return null;
+    return <LoadingScreen message="Loading settings..." />;
   }
 
   if (error || !settings) {

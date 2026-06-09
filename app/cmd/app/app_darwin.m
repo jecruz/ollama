@@ -22,9 +22,11 @@ extern NSString *SystemWidePath;
 bool firstTimeRun,startHidden; // Set in run before initialization
 
 - (void)application:(NSApplication *)application openURLs:(NSArray<NSURL *> *)urls {
+    appLogInfo(@"application:openURLs called");
     for (NSURL *url in urls) {
         if ([url.scheme isEqualToString:@"ollama"]) {
             NSString *path = url.path;
+            appLogInfo([NSString stringWithFormat:@"ollama URL scheme triggered: %@", url]);
 
             if (path && ([path isEqualToString:@"/connect"] || [url.host isEqualToString:@"connect"])) {
                 // Special case: handle connect by opening browser instead of app
@@ -33,6 +35,7 @@ bool firstTimeRun,startHidden; // Set in run before initialization
                 // Set app to be active and visible
                 [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
                 [NSApp activateIgnoringOtherApps:YES];
+                ShowUI();
             }
             
             break;
@@ -1085,7 +1088,7 @@ void styleWindow(uintptr_t wndPtr) {
     w.titleVisibility = NSWindowTitleHidden;
     w.titlebarAppearsTransparent = YES;
     w.toolbarStyle = NSWindowToolbarStyleUnified;
-    w.movableByWindowBackground = NO;
+    w.movableByWindowBackground = YES;
     w.hasShadow = YES;
 
     NSView *cv = w.contentView;

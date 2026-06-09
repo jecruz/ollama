@@ -22,6 +22,7 @@ interface WebviewAPI {
 declare global {
   interface Window {
     webview?: WebviewAPI;
+    ready?: () => void;
     drag?: () => void;
     doubleClick?: () => void;
     menu: (items: MenuItem[]) => Promise<string | null>;

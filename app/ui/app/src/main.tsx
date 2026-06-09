@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { routeTree } from "./routeTree.gen";
 import { fetchUser } from "./api";
 import { StreamingProvider } from "./contexts/StreamingContext";
+import AppReady from "@/components/AppReady";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,11 +18,17 @@ const queryClient = new QueryClient({
   },
 });
 
-fetchUser().then((userData) => {
-  if (userData) {
-    queryClient.setQueryData(["user"], userData);
-  }
-});
+// Defer the initial fetch so it doesn't block the first paint. The
+// router will handle the case where user data isn't loaded yet.
+fetchUser()
+  .then((userData) => {
+    if (userData) {
+      queryClient.setQueryData(["user"], userData);
+    }
+  })
+  .catch(() => {
+    // Ignore - user query will be retried by React Query
+  });
 
 const router = createRouter({
   routeTree,
@@ -42,6 +49,7 @@ if (!rootElement.innerHTML) {
     <StrictMode>
       <QueryClientProvider client={queryClient}>
         <StreamingProvider>
+          <AppReady />
           <RouterProvider router={router} />
         </StreamingProvider>
       </QueryClientProvider>
