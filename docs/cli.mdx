@@ -97,6 +97,44 @@ ollama rm gemma4
 ollama ls
 ```
 
+### Inspect a registered GGUF model
+
+Ocelot can inspect local GGUF models registered with `ocelot add`:
+
+```
+ocelot info gemma2b
+ocelot info bge-small --json
+```
+
+### Quantize a GGUF model
+
+Ocelot can run the installed `llama-quantize` engine and optionally register the output model:
+
+```
+ocelot quantize input.gguf output.gguf --type q4_k_m
+ocelot quantize input.gguf output.gguf --type tq2_0 --threads 8 --imatrix importance.dat --register
+```
+
+### Inspect the local Ocelot engine
+
+Ocelot can report the installed puma.cpp engine version, Metal device, supported quant types, GGML backends, and installed runtime files:
+
+```
+ocelot engine info
+ocelot engine info --json
+```
+
+### Sync Ocelot models to LLM Dynamix
+
+Ocelot can register local GGUF models with LLM Dynamix:
+
+```
+ocelot llmdynamix register gemma2b
+ocelot llmdynamix register --all
+ocelot llmdynamix list
+ocelot llmdynamix unregister gemma2b
+```
+
 ### Sign in to Ollama
 
 ```

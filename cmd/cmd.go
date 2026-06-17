@@ -2380,6 +2380,28 @@ func NewCLI() *cobra.Command {
 	createCmd.Flags().String("draft-quantize", "", "Quantize draft model to this level")
 	createCmd.Flags().Bool("experimental", false, "Enable experimental safetensors model creation")
 
+	addCmd := &cobra.Command{
+		Use:   "add FILE_OR_DIRECTORY",
+		Short: "Register local GGUF model files",
+		Args:  cobra.ExactArgs(1),
+		RunE:  addHandler,
+	}
+
+	addCmd.Flags().String("name", "", "Name to register for a single GGUF file")
+	addCmd.Flags().String("family", "", "Model family to record in metadata")
+	addCmd.Flags().Bool("no-llmdynamix", false, "Skip updating ~/.llmdynamix/config.yaml")
+
+	infoCmd := &cobra.Command{
+		Use:   "info MODEL",
+		Short: "Show local GGUF model metadata",
+		Args:  cobra.ExactArgs(1),
+		RunE:  infoHandler,
+	}
+
+	infoCmd.Flags().Bool("json", false, "Output metadata as JSON")
+
+	quantizeCmd := quantizeCommand()
+
 	showCmd := &cobra.Command{
 		Use:     "show MODEL",
 		Short:   "Show information for a model",
@@ -2551,6 +2573,9 @@ func NewCLI() *cobra.Command {
 
 	for _, cmd := range []*cobra.Command{
 		createCmd,
+		addCmd,
+		infoCmd,
+		quantizeCmd,
 		showCmd,
 		runCmd,
 		stopCmd,
@@ -2597,6 +2622,11 @@ func NewCLI() *cobra.Command {
 
 	rootCmd.AddCommand(
 		serveCmd,
+		addCmd,
+		infoCmd,
+		quantizeCmd,
+		engineCommand(),
+		llmDynamixCommand(),
 		createCmd,
 		showCmd,
 		runCmd,
