@@ -115,6 +115,12 @@ ocelot quantize input.gguf output.gguf --type q4_k_m
 ocelot quantize input.gguf output.gguf --type tq2_0 --threads 8 --imatrix importance.dat --register
 ```
 
+Add `--allow-requantize` to requantize a model that is already quantized (for example, going from `tq3_1s` to `tq1_0`). This can reduce quality; only use it when the source is already a quantized GGUF and a smaller target is required:
+
+```
+ocelot quantize input.gguf output.gguf --type tq1_0 --allow-requantize
+```
+
 ### Inspect the local Ocelot engine
 
 Ocelot can report the installed puma.cpp engine version, Metal device, supported quant types, GGML backends, and installed runtime files:

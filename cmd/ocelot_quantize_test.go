@@ -22,6 +22,17 @@ func TestQuantizeBuildsCommandArgs(t *testing.T) {
 	}
 }
 
+func TestQuantizeBuildsAllowRequantizeArg(t *testing.T) {
+	got := buildQuantizeArgs("input.gguf", "output.gguf", quantizeOptions{
+		quantType:       "tq3_1s",
+		allowRequantize: true,
+	})
+	want := []string{"--allow-requantize", "input.gguf", "output.gguf", "tq3_1s"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("buildQuantizeArgs() = %#v, want %#v", got, want)
+	}
+}
+
 func TestQuantizeRejectsUnsupportedType(t *testing.T) {
 	cmd := NewCLI()
 	var out bytes.Buffer

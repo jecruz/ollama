@@ -18,10 +18,11 @@ import (
 var quantizeRunCommand = runQuantizeCommand
 
 type quantizeOptions struct {
-	quantType string
-	threads   int
-	imatrix   string
-	register  bool
+	quantType       string
+	threads         int
+	imatrix         string
+	allowRequantize bool
+	register        bool
 }
 
 type quantizedModelStats struct {
@@ -40,6 +41,7 @@ func quantizeCommand() *cobra.Command {
 	cmd.Flags().String("type", "", "Quantization type: q4_0, q4_k_m, q8_0, tq1_0, tq2_0, tq3_1s, f16")
 	cmd.Flags().Int("threads", 0, "Number of quantization threads")
 	cmd.Flags().String("imatrix", "", "Importance matrix file")
+	cmd.Flags().Bool("allow-requantize", false, "Allow requantizing tensors that have already been quantized (may reduce quality)")
 	cmd.Flags().Bool("register", false, "Register the output GGUF after successful quantization")
 	_ = cmd.MarkFlagRequired("type")
 	return cmd
@@ -47,10 +49,11 @@ func quantizeCommand() *cobra.Command {
 
 func quantizeHandler(cmd *cobra.Command, args []string) error {
 	opts := quantizeOptions{
-		quantType: strings.TrimSpace(cmd.Flags().Lookup("type").Value.String()),
-		threads:   mustGetIntFlag(cmd, "threads"),
-		imatrix:   strings.TrimSpace(cmd.Flags().Lookup("imatrix").Value.String()),
-		register:  mustGetBoolFlag(cmd, "register"),
+		quantType:       strings.TrimSpace(cmd.Flags().Lookup("type").Value.String()),
+		threads:         mustGetIntFlag(cmd, "threads"),
+		imatrix:         strings.TrimSpace(cmd.Flags().Lookup("imatrix").Value.String()),
+		allowRequantize: mustGetBoolFlag(cmd, "allow-requantize"),
+		register:        mustGetBoolFlag(cmd, "register"),
 	}
 	if err := validateQuantizeType(opts.quantType); err != nil {
 		return err
@@ -104,7 +107,10 @@ func validateQuantizeType(quantType string) error {
 }
 
 func buildQuantizeArgs(inputPath, outputPath string, opts quantizeOptions) []string {
-	args := make([]string, 0, 7)
+	args := make([]string, 0, 8)
+	if opts.allowRequantize {
+		args = append(args, "--allow-requantize")
+	}
 	if opts.threads > 0 {
 		args = append(args, "--threads", fmt.Sprintf("%d", opts.threads))
 	}
