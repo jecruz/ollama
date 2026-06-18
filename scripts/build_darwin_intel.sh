@@ -126,11 +126,11 @@ require_notarization_env() {
 
 clean_stale_mlx_payload() {
     if is_truthy "$OCELOT_INTEL_ENABLE_MLX"; then
-        return
+        return 0
     fi
 
     mlx_payload_dir="$INSTALL_PREFIX/lib/ollama"
-    [ -d "$mlx_payload_dir" ] || return
+    [ -d "$mlx_payload_dir" ] || return 0
 
     for stale_mlx in "$mlx_payload_dir"/mlx_*; do
         [ -e "$stale_mlx" ] || continue
@@ -146,6 +146,7 @@ clean_stale_mlx_payload() {
             rm "$stale_mlx"
         fi
     done
+    return 0
 }
 
 prepare_sources() {
