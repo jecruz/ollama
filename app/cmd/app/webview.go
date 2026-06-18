@@ -85,6 +85,112 @@ func (w *Webview) Run(path string) unsafe.Pointer {
 		// Set token cookie
 		document.cookie = "token=` + w.token + `; path=/";
 	`
+		if runtime.GOOS == "darwin" {
+			init += `
+		// Ensure visible background before React mounts so the user always
+		// sees something if the webview would otherwise paint blank.
+		function applyStartupBackground() {
+			document.documentElement.style.backgroundColor = "#171717";
+			if (document.body) {
+				document.body.style.backgroundColor = "#171717";
+			}
+		}
+		applyStartupBackground();
+		window.addEventListener('DOMContentLoaded', applyStartupBackground);
+
+		// Log startup failures that can otherwise leave the native webview blank.
+		window.addEventListener('error', function(e) {
+			if (e && e.message) {
+				console.error('[webview] runtime error:', e.message, e.filename, e.lineno);
+			}
+		});
+		window.addEventListener('unhandledrejection', function(e) {
+			if (e && e.reason) {
+				console.error('[webview] unhandled rejection:', e.reason);
+			}
+		});
+
+		// Work around a JavaScriptCore limitation on macOS 12 (Monterey),
+		// whose WebKit predates lookbehind support. Regexes using lookbehind,
+		// for example marked's module init new RegExp("(?<!` + "`" + `)..."),
+		// throw "invalid group specifier name", which breaks the chunk and
+		// prevents the chat UI from rendering. Lookbehind cannot be emulated
+		// on this engine, so when a pattern fails to compile we strip only
+		// lookbehind assertions and retry. Named groups, backreferences and
+		// lookahead keep their native behavior.
+		(function() {
+			var NativeRegExp = RegExp;
+			function stripLookbehind(src) {
+				var out = '', i = 0, n = src.length;
+				while (i < n) {
+					var c = src[i];
+					if (c === '\\') { out += c + (src[i + 1] || ''); i += 2; continue; }
+					if (c === '[') {
+						out += c; i++;
+						while (i < n) {
+							if (src[i] === '\\') { out += src[i] + (src[i + 1] || ''); i += 2; continue; }
+							out += src[i];
+							if (src[i] === ']') { i++; break; }
+							i++;
+						}
+						continue;
+					}
+					if (c === '(' && src[i + 1] === '?' && src[i + 2] === '<' &&
+						(src[i + 3] === '=' || src[i + 3] === '!')) {
+						var depth = 1; i += 4;
+						while (i < n && depth > 0) {
+							if (src[i] === '\\') { i += 2; continue; }
+							if (src[i] === '[') {
+								i++;
+								while (i < n) {
+									if (src[i] === '\\') { i += 2; continue; }
+									if (src[i] === ']') { i++; break; }
+									i++;
+								}
+								continue;
+							}
+							if (src[i] === '(') depth++;
+							else if (src[i] === ')') depth--;
+							i++;
+						}
+						continue;
+					}
+					out += c; i++;
+				}
+				return out;
+			}
+			function PatchedRegExp(pattern, flags) {
+				if (!(this instanceof PatchedRegExp)) {
+					return new PatchedRegExp(pattern, flags);
+				}
+				var r;
+				try {
+					r = new NativeRegExp(pattern, flags);
+				} catch (err) {
+					var src = typeof pattern === 'string' ? pattern :
+						(pattern && pattern.source);
+					if (typeof src === 'string' &&
+						(src.indexOf('(?<=') !== -1 || src.indexOf('(?<!') !== -1)) {
+						try {
+							r = new NativeRegExp(stripLookbehind(src), flags);
+						} catch (e2) {
+							throw err;
+						}
+					} else {
+						throw err;
+					}
+				}
+				Object.setPrototypeOf(r, PatchedRegExp.prototype);
+				return r;
+			}
+			PatchedRegExp.prototype = Object.create(NativeRegExp.prototype, {
+				constructor: { value: PatchedRegExp }
+			});
+			Object.setPrototypeOf(PatchedRegExp, NativeRegExp);
+			window.RegExp = PatchedRegExp;
+		})();
+	`
+		}
 		// Windows-specific scrollbar styling
 		if runtime.GOOS == "windows" {
 			init += `
@@ -234,6 +340,7 @@ func (w *Webview) Run(path string) unsafe.Pointer {
 		})
 
 		wv.Bind("ready", func() {
+			slog.Debug("webview ready callback invoked")
 			showWindow(wv.Window())
 		})
 
@@ -464,6 +571,7 @@ func (w *Webview) Run(path string) unsafe.Pointer {
 		wv.SetSize(800, 600, webview.HintMin)
 
 		w.webview = wv
+		slog.Debug("webview navigating", "url", url)
 		w.webview.Navigate(url)
 	} else {
 		w.webview.Eval(fmt.Sprintf(`

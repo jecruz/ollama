@@ -47,17 +47,23 @@ var (
 //export StartUI
 func StartUI(path *C.cchar_t) {
 	p := C.GoString(path)
+	slog.Debug("StartUI called", "path", p)
 	wv.Run(p)
+	slog.Debug("StartUI webview run returned")
 	styleWindow(wv.webview.Window())
 	C.setWindowDelegate(wv.webview.Window())
 }
 
 //export ShowUI
 func ShowUI() {
-	// If webview is already running, just show the window
+	slog.Debug("ShowUI called")
+	// If webview is already running, navigate to root and show the window.
 	if wv.IsRunning() && wv.webview != nil {
+		slog.Debug("ShowUI webview running, navigating to root")
+		wv.webview.Eval(`history.pushState({}, '', '/'); window.dispatchEvent(new PopStateEvent('popstate'));`)
 		showWindow(wv.webview.Window())
 	} else {
+		slog.Debug("ShowUI webview not running, starting UI")
 		root := C.CString("/")
 		defer C.free(unsafe.Pointer(root))
 		StartUI(root)

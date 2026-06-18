@@ -126,14 +126,53 @@ ocelot engine info --json
 
 ### Sync Ocelot models to LLM Dynamix
 
-Ocelot can register local GGUF models with LLM Dynamix:
+Ocelot can keep LLM Dynamix configured with a local mirror of registered Ocelot models.
+
+The command writes to:
+
+```
+~/.llmdynamix/config.yaml
+```
+
+Use `register` to add models:
 
 ```
 ocelot llmdynamix register gemma2b
 ocelot llmdynamix register --all
+```
+
+Use `list` to compare local Ocelot registrations with what is already in the config:
+
+```
 ocelot llmdynamix list
+```
+
+Example output:
+
+```text
+Synced models:
+  - gemma2b (ocelot) → chat
+  - nomic-bert-embed (ocelot) → embedding
+Unsynced models:
+  - qwen2.5 (not in ~/.llmdynamix/config.yaml)
+```
+
+Use `unregister` to remove a model from the config:
+
+```
 ocelot llmdynamix unregister gemma2b
 ```
+
+Details:
+- Sync is idempotent: already-synced models are skipped.
+- If a model is already present but its endpoint changed, the endpoint is updated.
+- GGUF model type is inferred from metadata:
+  - `bert` and `nomic-bert` archives are `embedding`
+  - all other models are `chat`
+- Synced entries are written as OpenAI-compatible models with:
+  - `name` set to the registered model name
+  - `alias` set to `<model-name> (ocelot)` so you can identify managed entries
+  - `base-url` set to `http://127.0.0.1:12435/v1`
 
 ### Sign in to Ollama
 
