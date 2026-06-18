@@ -130,6 +130,60 @@ ocelot engine info
 ocelot engine info --json
 ```
 
+### Switch the active engine
+
+Ocelot persists the engine choice in `~/.config/ocelot/engine.env` and the
+`~/.local/bin/ocelot` launcher sources it before starting the binary. Valid
+selections:
+
+- `puma` (default) — puma.cpp / llama-server with the Metal GGML backend.
+- `metal` — alias for `puma` on Apple Silicon; maps to `intel-metal` on Intel Mac.
+- `intel-metal` — explicit Metal GGML backend on Intel Mac.
+- `intel-cpu` — explicit CPU GGML backend on Intel Mac.
+- `cpu` — portable CPU GGML backend alias.
+- `auto` — leaves `OLLAMA_LLM_LIBRARY` unset so ocelot autodetects the backend.
+- `mlx` — experimental MLX runtime for safetensors LLM models only.
+- `mlx_<variant>` — pin to a specific installed MLX runtime (for example `mlx_metal_v3`).
+
+Switch engines:
+
+```
+ocelot engine use puma
+ocelot engine use auto
+ocelot engine use mlx
+ocelot engine use mlx_metal_v3
+```
+
+Show what is currently selected (and where it came from):
+
+```
+ocelot engine current
+ocelot engine current --json
+```
+
+Restart the running service for server-side changes:
+
+```
+launchctl unload ~/Library/LaunchAgents/com.ocelot.server.plist
+launchctl load ~/Library/LaunchAgents/com.ocelot.server.plist
+```
+
+### Check MLX feasibility
+
+`ocelot engine mlx` reports whether the installed MLX runtime libraries are
+eligible for the current platform, what subset of the Ollama API surface
+they can serve, and what is still blocked:
+
+```
+ocelot engine mlx
+ocelot engine mlx --json
+```
+
+Even when MLX is selectable, GGUF models continue to route to puma.cpp /
+llama-server because the MLX runner only implements the completion surface.
+Native MLX chat templates, embeddings, and detokenize remain unsupported, so
+flows that depend on those features should stay on `puma`.
+
 ### Sync Ocelot models to LLM Dynamix
 
 Ocelot can keep LLM Dynamix configured with a local mirror of registered Ocelot models.
